@@ -1,5 +1,5 @@
 import argparse
-import logzero
+from train import Train
 
 from pathlib import Path
 
@@ -13,11 +13,12 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--dropout_frac', type=float, default=5e-2)
+    parser.add_argument('--hidden_size', type=int, default=32)
 
     args = parser.parse_args()
 
     # TODO: Import train and solve
     if args.operation == "train":
-        train(args)
-    else:
-        solve(args)
+        Train(args).train()
+    # else:
+    #     solve(args)
