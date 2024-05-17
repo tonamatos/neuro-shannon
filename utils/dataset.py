@@ -25,20 +25,18 @@ class MISDataset(torch.utils.data.Dataset):
       graph = pickle.load(f)
 
     num_nodes = graph.number_of_nodes()
-
     node_labels = [_[1] for _ in graph.nodes(data='label')]
     if node_labels is not None and node_labels[0] is not None:
         node_labels = np.array(node_labels, dtype=np.int64)
     else:
         node_labels = np.zeros(num_nodes, dtype=np.int64)
-    node_labels = np.array(node_labels, dtype=np.int64)
     assert node_labels.shape[0] == num_nodes
     
     edges = np.array(graph.edges, dtype=np.int64)
     edges = np.concatenate([edges, edges[:, ::-1]], axis=0)
-    # add self loop
-    self_loop = np.arange(num_nodes).reshape(-1, 1).repeat(2, axis=1)
-    edges = np.concatenate([edges, self_loop], axis=0)
+    # # add self loop
+    # self_loop = np.arange(num_nodes).reshape(-1, 1).repeat(2, axis=1)
+    # edges = np.concatenate([edges, self_loop], axis=0)
     edges = edges.T
 
     return num_nodes, node_labels, edges

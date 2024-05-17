@@ -15,6 +15,11 @@ if __name__ == '__main__':
     parser.add_argument('--dropout_frac', type=float, default=5e-2)
     parser.add_argument('--hidden_size', type=int, default=32)
 
+    parser.add_argument('--p1', type=int, default=2)
+    parser.add_argument('--p2', type=int, default=2)
+    parser.add_argument('--c1', type=float, default=0.5)
+    parser.add_argument('--c2', type=float, default=1)
+
     args = parser.parse_args()
 
     # TODO: Import train and solve

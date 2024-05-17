@@ -7,6 +7,7 @@ from torch_geometric.loader import DataLoader
 from models.model import CombGNN
 from utils.loss_track import AverageMeter
 from utils.dataset import MISDataset, train_val_split
+from utils.qubo import QUBO
 
 import time
 
@@ -22,11 +23,17 @@ class Train:
         self.num_epochs = args.num_epochs
         self.output = args.output
         self.loss_track = AverageMeter()
+        self.qubo = QUBO(args.p1, args.p2)
+        self.c1 = args.c1
+        self.c2 = args.c2
 
     def dataloader(self, dataset):
         return DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True
         )
+    
+    def qubo_setup(self, graph):
+        Q_gnn = self.qubo.create_Q_matrix(graph, self.p1, self.p2)
 
     def train(self):        
         self.model.train()
@@ -34,7 +41,7 @@ class Train:
         print(self.device)
         train_dataloader = self.dataloader(self.train_dataset)
         optimizer = Adam(params=self.model.parameters(), lr=self.learning_rate)
-        l1 = nn.MSELoss()
+        l1 = nn.BCELoss()
         
         # Start training
         for epoch in range(self.num_epochs + 1):
@@ -44,15 +51,19 @@ class Train:
                 initial_emb = graph.x
                 label = graph.y
                 edge_index = graph.edge_index
-                adj = graph.adj
-
-                initial_emb, label, edge_index, adj = initial_emb.to(self.device), label.to(self.device), edge_index.to(self.device), adj.to(self.device)
+                # adj = graph.adj
+                initial_emb, label, edge_index= initial_emb.to(self.device), label.to(self.device), edge_index.to(self.device)
+                
+                # print(adj)
+                Q_gnn = self.qubo.create_Q_matrix(edges=edge_index, num_nodes=len(label))
+                
                 optimizer.zero_grad()
                 output = self.model(initial_emb, edge_index)
-                # print("output", output.squeeze(1))
-                # print(label)
-                loss = l1(output.squeeze(1), label.float()) # + qubo_approx_cost(output, Q)
-                print(loss)
+                l2 = self.qubo.qubo_approx_cost(output, Q_gnn)
+                print("output", output.squeeze(1))
+                print(label)
+                loss = self.c1 * l1(output.squeeze(1), label.float()) + self.c2 * l2
+                # print(loss)
                 loss.backward()
                 optimizer.step()
                 self.loss_track.update(val=loss.item())
