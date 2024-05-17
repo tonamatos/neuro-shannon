@@ -51,10 +51,8 @@ class Train:
                 initial_emb = graph.x
                 label = graph.y
                 edge_index = graph.edge_index
-                # adj = graph.adj
                 initial_emb, label, edge_index= initial_emb.to(self.device), label.to(self.device), edge_index.to(self.device)
                 
-                # print(adj)
                 Q_gnn = self.qubo.create_Q_matrix(edges=edge_index, num_nodes=len(label))
                 
                 optimizer.zero_grad()
