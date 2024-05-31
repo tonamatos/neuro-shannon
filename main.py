@@ -1,6 +1,6 @@
 import argparse
 from train import Train
-
+from solve import Solve
 from pathlib import Path
 
 if __name__ == '__main__':
@@ -9,11 +9,12 @@ if __name__ == '__main__':
     parser.add_argument("input", type=Path, action="store", help="Directory containing input graphs (to be solved/trained on).")
     parser.add_argument("output", type=Path, action="store",  help="Folder in which the output (e.g. json containg statistics and solution will be stored)")
 
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--dropout_frac', type=float, default=5e-2)
     parser.add_argument('--hidden_size', type=int, default=32)
+    parser.add_argument('--supervised', action="store_true", default=False)
 
     parser.add_argument('--p1', type=int, default=2)
     parser.add_argument('--p2', type=int, default=2)
@@ -24,6 +25,9 @@ if __name__ == '__main__':
 
     # TODO: Import train and solve
     if args.operation == "train":
-        Train(args).train()
-    # else:
-    #     solve(args)
+        if args.supervised:
+            Train(args).train()
+        else:
+            raise ValueError("Unsupervised Learning should solve directly")
+    else:
+        Solve(args).run()
