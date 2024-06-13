@@ -1,8 +1,9 @@
 import math
 
 import torch
-import torch_sparse
 from torch import Tensor
+import torch.nn as nn
+import torch.nn.functional as F
 from torch_sparse import SparseTensor
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
@@ -31,8 +32,7 @@ class GraphConvolutionLayer(Module):
 
     def forward(self, input: Tensor | SparseTensor, adj_matrix: Tensor | SparseTensor):
         # print("Input", input.to_dense())
-        support = torch.mm(input.to_dense(), self.weight)
-        # print("support (Dense):", support)
+        support = torch.mm(input, self.weight)
         
         output = torch.spmm(adj_matrix.to_dense(), support)
         # print("output (Dense):", output)
@@ -45,3 +45,25 @@ class GraphConvolutionLayer(Module):
         return self.__class__.__name__ + ' ('\
                + str(self.in_features) + ' -> ' \
                + str(self.out_features) + ')'
+
+class ResidualGraphConvolutionLayer(nn.Module):
+    def __init__(self, in_features, out_features):
+        super(ResidualGraphConvolutionLayer, self).__init__()
+        self.conv1 = GraphConvolutionLayer(in_features, out_features)
+        self.conv2 = GraphConvolutionLayer(in_features, out_features)
+        self.bn = nn.BatchNorm1d(out_features)
+
+    def forward(self, x, adj_matrix):
+        identity = x
+
+        out = self.conv1(x, adj_matrix)
+        out = self.bn(out)
+        out = F.relu(out)
+
+        out = self.conv2(out, adj_matrix)
+        out = self.bn(out)
+
+        out += identity
+        out = F.relu(out)
+
+        return out
