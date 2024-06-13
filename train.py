@@ -26,8 +26,6 @@ class Train:
         self.output = args.output
         self.loss_track = AverageMeter()
         self.qubo = QUBO(args.p1, args.p2)
-        self.c1 = args.c1
-        self.c2 = args.c2
     
     def train(self):        
         self.model.train()

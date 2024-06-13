@@ -51,7 +51,7 @@ class Solve():
                 embedding_d0 = 1
                 embedding_d1 = 100
                 probs = self.model(x.view(adj.size(0), -1), adj)
-                adj = SparseTensor(row=edge_index[0], col=edge_index[1], value=torch.ones_like(edge_index[1], dtype=torch.float32), sparse_sizes=(len(_), len(_)))
+                adj = SparseTensor(row=edge_index[0], col=edge_index[1], value=torch.ones_like(edge_index[1], dtype=torch.float32), sparse_sizes=(len(adj.size(0)), len(adj.size(0))))
                 sol = mis_decode_np(probs.squeeze(1), adj, x, 1, 6)
                 print("GNN Solution is:", sol, "Capacity is ", sol.sum())
                 node_emb = torch.tensor(sol).view(adj.size(0), -1).to(dtype=torch.float32)
@@ -83,7 +83,7 @@ class Solve():
                     rerun = False
             print(f"Loss:{loss.item()}")
             solver_model.eval()
-            sol1 = mis_decode_np(solver_model(node_emb, adj).squeeze(1), adj, x.data, 1, 6)
+            sol1 = mis_decode_np(solver_model(node_emb, adj).squeeze(1), adj, x.data, self.args.c1, self.args.c2)
             print("Solution is:", sol1, "Capacity is ", sol1.sum())
             sol2 = mis_decode_np(get_classification(solver_model(node_emb, adj).squeeze(1)), adj, x.data, 0, 1)
             print("Greedy Solution is:", sol2, "Capacity is ", sol2.sum())
