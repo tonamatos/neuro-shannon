@@ -9,6 +9,7 @@ from models.model import MISGNNSolver, MISGNNEmbedding
 from utils.dataset import MISDataset, load_from_directory
 from utils.qubo import QUBO
 from utils.dataloader import dataloader
+from utils.dataset import normalize_node_degree_list, get_node_degree
 
 class Solve():
     def __init__(self, args, data=None) -> None:
@@ -46,19 +47,22 @@ class Solve():
             adj: SparseTensor = graph.adj
             edge_index: Tensor = graph.edge_index
             y = graph.y
-              
             if self.supervised:
                 embedding_d0 = 1
                 embedding_d1 = 100
+                normalized_node_degree = x
                 probs = self.model(x.view(adj.size(0), -1), adj)
-                adj = SparseTensor(row=edge_index[0], col=edge_index[1], value=torch.ones_like(edge_index[1], dtype=torch.float32), sparse_sizes=(len(adj.size(0)), len(adj.size(0))))
-                sol = mis_decode_np(probs.squeeze(1), adj, x, 1, 6)
+                print(probs)
+                print(torch.nn.BCELoss()(probs.squeeze(1), y.float()))
+                adj = SparseTensor(row=edge_index[0], col=edge_index[1], value=torch.ones_like(edge_index[1], dtype=torch.float32), sparse_sizes=(adj.size(0), adj.size(0)))
+                sol = mis_decode_np(probs.squeeze(1), adj, normalized_node_degree, 1, 0)
                 print("GNN Solution is:", sol, "Capacity is ", sol.sum())
                 node_emb = torch.tensor(sol).view(adj.size(0), -1).to(dtype=torch.float32)
             else:
                 embedding_d0 = 1
                 embedding_d1 = 100
                 node_emb = x.view(adj.size(0), -1)
+                normalized_node_degree = x
 
             num_classes = 1
             Q_matrix = self.qubo.create_Q_matrix(edge_index, adj.size(0), x.data)
@@ -79,13 +83,13 @@ class Solve():
                     loss.backward(retain_graph=True)
                     optimizer.step()
                     # print(f"Epoch {epoch+1}: {loss.item()}")
-                if loss.item() < -1000:
+                if loss.item() < -self.args.penalty_threshold:
                     rerun = False
             print(f"Loss:{loss.item()}")
             solver_model.eval()
-            sol1 = mis_decode_np(solver_model(node_emb, adj).squeeze(1), adj, x.data, self.args.c1, self.args.c2)
+            sol1 = mis_decode_np(solver_model(node_emb, adj).squeeze(1), adj, normalized_node_degree, self.args.c1, self.args.c2)
             print("Solution is:", sol1, "Capacity is ", sol1.sum())
-            sol2 = mis_decode_np(get_classification(solver_model(node_emb, adj).squeeze(1)), adj, x.data, 0, 1)
+            sol2 = mis_decode_np(get_classification(solver_model(node_emb, adj).squeeze(1)), adj, normalized_node_degree, 0, 1)
             print("Greedy Solution is:", sol2, "Capacity is ", sol2.sum())
             print("Gound Truth", y, "Capacity is ", y.sum())
             # print("The solution is: ", verify_sol(sol, adj.to_dense()), "Ground Truth solutioin is: ", verify_sol(y, adj.to_dense()))
@@ -103,7 +107,6 @@ def mis_decode_np(predictions, adj_matrix, normalized_node_embeddings, c1=0, c2=
     solution = np.zeros_like(predictions)
     # print(predictions, np.asarray(normalized_node_embeddings))
     combined_scores = c1 * predictions + c2 * np.asarray(normalized_node_embeddings)
-    # print(combined_scores)
     sorted_predict_labels = np.argsort(-combined_scores)
     csr_adj_matrix = scipy.sparse.csr_matrix(adj_matrix.to_dense().numpy())
 

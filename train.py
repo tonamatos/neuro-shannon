@@ -28,6 +28,7 @@ class Train:
         self.qubo = QUBO(args.p1, args.p2)
     
     def train(self):        
+        self.model.to(self.device)
         self.model.train()
         # load train data as dataloader
         print(self.device)
@@ -45,9 +46,10 @@ class Train:
                 label = graph.y
                 edge_index = graph.edge_index
                 adj_matrix = graph.adj
-                initial_emb, label, edge_index= initial_emb.to(self.device), label.to(self.device), edge_index.to(self.device)              
+                initial_emb, label, edge_index, adj_matrix = initial_emb.to(self.device), label.to(self.device), edge_index.to(self.device), adj_matrix.to(self.device)             
                 optimizer.zero_grad()
                 probs = self.model(initial_emb.view(adj_matrix.size(0), -1), adj_matrix)
+                # print(probs)
                 loss = l1(probs.squeeze(1), label.float()) 
                 loss.backward()
                 optimizer.step()
@@ -63,10 +65,12 @@ class Train:
             label = val_g.y
             edge_index = val_g.edge_index
             adj_matrix = val_g.adj
-            emb, val_probs = self.model(initial_emb, adj_matrix)
+            print("init:",initial_emb)
+            print("adj",adj_matrix)
+            initial_emb, label, edge_index, adj_matrix = initial_emb.to(self.device), label.to(self.device), edge_index.to(self.device), adj_matrix.to(self.device)
+            val_probs = self.model(initial_emb.view(adj_matrix.size(0), -1), adj_matrix)
             loss = l1(val_probs.squeeze(1), label.float())
             self.loss_track.update(val=loss.item())
-            print(emb)
             print(val_probs)
             print(label)
         print("Validation Complete; Loss: %.5f" % (self.loss_track.avg))
@@ -74,6 +78,6 @@ class Train:
 
         # Save to the directory if I satisfy with my result
         print("Training completed, saving model to %s." % self.output)
-        torch.save(self.model.state_dict(), self.output / f"final_model_{str(self.input).split('/')[-1]}_epoch{self.num_epochs}_num_hidden{self.num_hidden_layers}.torch")
+        torch.save(self.model.state_dict(), self.output / f"final_model_mis_sat_epoch{self.num_epochs}_num_hidden{self.num_hidden_layers}.torch")
         
 

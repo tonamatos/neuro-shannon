@@ -49,7 +49,10 @@ class MISDataset(torch.utils.data.Dataset):
     # Initial embeddings to all ones
     # node_embeddings = np.ones((num_nodes, 1), dtype=np.float32)
 
-    normalized_degrees = normalize_node_degree_list(get_node_degree(edges=edge_index, num_nodes=num_nodes))
+    # if not self.supervised:
+    node_embeddings = normalize_node_degree_list(get_node_degree(edges=edge_index, num_nodes=num_nodes))
+    # else:
+        # node_embeddings = np.ones((num_nodes, 1), dtype=np.float32)
     # print(normalized_degrees)
     # import time
     # time.sleep(10)
@@ -81,7 +84,7 @@ class MISDataset(torch.utils.data.Dataset):
         sparse_sizes=(num_nodes, num_nodes),
     )
 
-    graph_data = GraphData(x=torch.from_numpy(normalized_degrees).to(torch.float32),
+    graph_data = GraphData(x=torch.from_numpy(node_embeddings).to(torch.float32),
                            edge_index=edge_index_tensor,
                            adj=adj_matrix,
                            y=torch.from_numpy(node_labels))

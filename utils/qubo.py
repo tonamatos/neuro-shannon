@@ -1,4 +1,4 @@
-from pyqubo import Array
+# from pyqubo import Array
 import numpy as np
 import torch
 from torch_sparse import SparseTensor
@@ -10,16 +10,16 @@ class QUBO:
         self.p1 = p1
         self.p2 = p2
 
-    def create_mis_model(self, edges, num_nodes):
-        X = Array.create("X", shape=(num_nodes,), vartype="BINARY")
+    # def create_mis_model(self, edges, num_nodes):
+    #     X = Array.create("X", shape=(num_nodes,), vartype="BINARY")
 
-        hamiltonian = -self.p1 * sum(X)
-        for i in range(len(edges[0])):
-            u = edges[0][i].item()
-            v = edges[1][i].item()
+    #     hamiltonian = -self.p1 * sum(X)
+    #     for i in range(len(edges[0])):
+    #         u = edges[0][i].item()
+    #         v = edges[1][i].item()
 
-            hamiltonian += self.p2*(X[u] * X[v])
-        return hamiltonian.compile()
+    #         hamiltonian += self.p2*(X[u] * X[v])
+    #     return hamiltonian.compile()
     
     def create_Q_matrix(self, edges, num_nodes, normalized_node_degrees):
         indices = []
