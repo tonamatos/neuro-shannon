@@ -29,23 +29,6 @@ class AVG_SIZE():
         if self.count > 0:
             self.avg = self.size / self.count
 
-class AVG_DROP():
-    def __init__(self) -> None:
-        self.reset()
-    
-    def reset(self):
-        self.drop = 0
-        self.count = 0
-    
-    def update(self, solved_capacity, ground_truth_capacity, batch_size = 1):
-        drop_precentage = (ground_truth_capacity - solved_capacity) / ground_truth_capacity
-        self.drop += drop_precentage
-        self.count += batch_size
-    
-    def drop_percentage(self):
-        return self.drop / self.count
-
-
 class AVG_TIME():
     def __init__(self) -> None:
         self.reset()

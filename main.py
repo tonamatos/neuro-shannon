@@ -15,6 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('--dropout_frac', type=float, default=5e-2)
     parser.add_argument('--hidden_size', type=int, default=32)
     parser.add_argument('--supervised', action="store_true", default=False)
+    parser.add_argument('--qubo', action="store_true", default=True)
+    parser.add_argument('--DGA', action="store_true", default=False)
     parser.add_argument('--pretrained', type=Path, action="store")
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--penalty_threshold', type=float, help="Avoid poor minimization due to random initialization of parameters. Avoid stuck at local minimum.")
