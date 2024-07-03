@@ -18,6 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained', type=Path, action="store")
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--penalty_threshold', type=float, help="Avoid poor minimization due to random initialization of parameters. Avoid stuck at local minimum.")
+    parser.add_argument('--d1', type=int, help="Dimension in second layer for unsupervised QUBO approach", default=10)
 
     parser.add_argument('--p1', type=float, default=2)
     parser.add_argument('--p2', type=float, default=2)

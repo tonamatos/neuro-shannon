@@ -48,7 +48,7 @@ class MISDataset(torch.utils.data.Dataset):
     num_nodes, node_labels, edge_index = self.get_example(idx)
     
     node_embeddings = normalize_node_degree_list(get_node_degree(edges=edge_index, num_nodes=num_nodes))
-
+    
     if self.supervised:
       adj = sp.coo_matrix((np.ones(edge_index.shape[1]), (edge_index[0], edge_index[1])),
                               shape=(num_nodes, num_nodes),

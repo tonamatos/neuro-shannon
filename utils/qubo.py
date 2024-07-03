@@ -30,7 +30,7 @@ class QUBO:
         for i in range(num_nodes):
             indices.append([i, i])
             # Scale penalty to a reasonable range, e.g., [-self.p2, 0]
-            penalty = -p1 * (normalized_node_degrees[i]**(4))
+            penalty = -p1 * (normalized_node_degrees[i]**(2))
             values.append(penalty)
 
         for i in range(len(edges[0])):
