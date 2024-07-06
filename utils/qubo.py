@@ -5,10 +5,11 @@ from torch_sparse import SparseTensor
 from torch_sparse import spmm
 
 class QUBO:
-    def __init__(self, p1, p2) -> None:
+    def __init__(self, p1, p2, n) -> None:
         super(QUBO, self).__init__()
         self.p1 = p1
         self.p2 = p2
+        self.n = n
 
     # def create_mis_model(self, edges, num_nodes):
     #     X = Array.create("X", shape=(num_nodes,), vartype="BINARY")
@@ -24,13 +25,14 @@ class QUBO:
     def create_Q_matrix(self, edges, num_nodes, normalized_node_degrees):
         indices = []
         values = []
-        p1 = self.p2 * len(edges[0]) / (num_nodes)
+        p1 = self.p2 * len(edges[0]) / (num_nodes**self.n)
+        print(p1)
 
         # Adding diagonal elements with normalized penalties
         for i in range(num_nodes):
             indices.append([i, i])
             # Scale penalty to a reasonable range, e.g., [-self.p2, 0]
-            penalty = -p1 * (normalized_node_degrees[i]**(2))
+            penalty = -p1 * (normalized_node_degrees[i])
             values.append(penalty)
 
         for i in range(len(edges[0])):

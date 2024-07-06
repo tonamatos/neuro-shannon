@@ -16,8 +16,8 @@ class Train:
         self.model = MISGNNEmbedding(1, args.hidden_size, args.num_hidden_layers, args.dropout_frac, training=True)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.train_data, self.val_data = train_val_split(args.input)
-        self.train_dataset = MISDataset(self.train_data, supervised=True)
-        self.validation_dataset = MISDataset(self.val_data, supervised=True)
+        self.train_dataset = MISDataset(self.train_data, k=args.k, supervised=True)
+        self.validation_dataset = MISDataset(self.val_data, k=args.k, supervised=True)
         self.learning_rate = args.learning_rate
         self.batch_size = args.batch_size
         self.num_epochs = args.num_epochs
@@ -25,7 +25,7 @@ class Train:
         self.input = args.input
         self.output = args.output
         self.loss_track = AverageMeter()
-        self.qubo = QUBO(args.p1, args.p2)
+        self.qubo = QUBO(args.p1, args.p2, args.n)
     
     def train(self):        
         self.model.to(self.device)

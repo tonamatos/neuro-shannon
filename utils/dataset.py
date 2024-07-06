@@ -10,9 +10,10 @@ import scipy.sparse as sp
 from sklearn.model_selection import train_test_split
 
 class MISDataset(torch.utils.data.Dataset):
-    def __init__(self, file_lines, supervised=False):
+    def __init__(self, file_lines, k, supervised=False):
         self.file_lines = file_lines
         self.supervised = supervised
+        self.k = k
         print(f'Loaded with {len(self.file_lines)} examples')
 
     def __len__(self):
@@ -23,7 +24,11 @@ class MISDataset(torch.utils.data.Dataset):
             graph = pickle.load(f)
 
         num_nodes = graph.number_of_nodes()
-        node_labels = [_[1] for _ in graph.nodes(data='label')] or np.full(num_nodes, -1, dtype=np.int64)
+        node_labels = [_[1] for _ in graph.nodes(data='label')]
+        if node_labels and node_labels[0] is not None:
+            node_labels = np.array(node_labels, dtype=np.int64)
+        else:
+            node_labels = np.full(num_nodes, -1, dtype=np.int64)
 
         edges = np.array(graph.edges, dtype=np.int64)
         edges = np.concatenate([edges, edges[:, ::-1]], axis=0).T
@@ -32,7 +37,7 @@ class MISDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         num_nodes, node_labels, edge_index = self.get_example(idx)
-        node_embeddings = normalize_node_degree_list(get_node_degree(edge_index, num_nodes))
+        node_embeddings = normalize_node_degree_list(get_node_degree(edge_index, num_nodes), k=self.k)
 
         if self.supervised:
             adj = sp.coo_matrix((np.ones(edge_index.shape[1]), (edge_index[0], edge_index[1])),
@@ -84,7 +89,7 @@ def get_node_degree(edges, num_nodes):
             node_degree_list[edges[0][i]] += 1
     return node_degree_list
 
-def normalize_node_degree_list(node_degree_list, penalty=1):
+def normalize_node_degree_list(node_degree_list, k, penalty=1):
     node_degree_array = np.array(node_degree_list)
     min_degree = np.min(node_degree_array)
     max_degree = np.max(node_degree_array)
@@ -94,4 +99,4 @@ def normalize_node_degree_list(node_degree_list, penalty=1):
     else:
         normalized_degrees = np.full_like(node_degree_array, penalty, dtype=np.float32)
     
-    return 1 / (normalized_degrees + 1)
+    return 1 / (normalized_degrees + 1)**k

@@ -29,17 +29,15 @@ class AVG_SIZE():
         if self.count > 0:
             self.avg = self.size / self.count
 
-class AVG_TIME():
+class TIME():
     def __init__(self) -> None:
         self.reset()
     
     def reset(self):
         self.time = 0
-        self.count = 0
 
-    def update(self, time, batch_size=1):
+    def update(self, time):
         self.time += time
-        self.count += batch_size
 
     def avg_time(self):
-        return self.time / self.count
+        return self.time

@@ -9,7 +9,7 @@ from models.model import MISGNNSolver, MISGNNEmbedding
 from utils.dataset import MISDataset, load_from_directory
 from utils.qubo import QUBO
 from utils.dataloader import dataloader
-from utils.metrics import SOLVED_ACCURACY, AVG_SIZE, AVG_TIME
+from utils.metrics import SOLVED_ACCURACY, AVG_SIZE, TIME
 import logging
 
 class Solve():
@@ -22,7 +22,7 @@ class Solve():
         self.batch_size = args.batch_size
         self.num_epochs = args.num_epochs
         self.dropout = args.dropout_frac
-        self.qubo_model = QUBO(args.p1, args.p2)
+        self.qubo_model = QUBO(args.p1, args.p2, args.n)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = None
 
@@ -48,18 +48,18 @@ class Solve():
         return solver_model, optimizer
 
     def run(self):
-        dataset = MISDataset(load_from_directory(self.input), supervised=self.supervised)
+        dataset = MISDataset(load_from_directory(self.input), k=self.args.k, supervised=self.supervised)
         dl = dataloader(dataset, self.batch_size)  # Using multiple workers to speed up data loading
         qubo_accuracy = SOLVED_ACCURACY()
         DGA_accuracy = SOLVED_ACCURACY()
         qubo_size = AVG_SIZE()
         DGA_size = AVG_SIZE()
         gt_size = AVG_SIZE()
-        qubo_time = AVG_TIME()
-        DGA_time = AVG_TIME()
+        qubo_time = TIME()
+        DGA_time = TIME()
         supervised_accuracy = SOLVED_ACCURACY()
         supervised_size = AVG_SIZE()
-        supervised_time = AVG_TIME()
+        supervised_time = TIME()
 
         for idx, graph in enumerate(dl):
             x: Tensor = graph.x.to(self.device)
@@ -73,14 +73,12 @@ class Solve():
                 tik = time.time()
                 embedding_d0 = 1
                 embedding_d1 = self.args.d1
-                normalized_node_degree = x
                 probs = self.model(x.view(adj.size(0), -1), adj)
                 adj = SparseTensor(row=edge_index[0], col=edge_index[1], value=torch.ones_like(edge_index[1], dtype=torch.float32), sparse_sizes=(adj.size(0), adj.size(0)))
-                sol = mis_decode_np(probs.squeeze(1), adj, normalized_node_degree, 1, 0)
-                supervised_time.update(time.time()-tik, self.args.batch_size)
+                sol = mis_decode_np(adj, x, 1, 0, probs.squeeze(1))
+                supervised_time.update(time.time()-tik)
                 supervised_size.update(sol.sum(), self.args.batch_size)
                 supervised_accuracy.update(sol.sum(), y.sum(), self.args.batch_size)
-                logging.info(f"Supervised Solver size: {supervised_size.avg}, Supervised Solved Accuracy: {supervised_accuracy.accuracy()}, Time: {supervised_time.avg_time()}")
                 node_emb = torch.tensor(sol).view(adj.size(0), -1).to(dtype=torch.float32, device=self.device)
             
             if self.qubo:
@@ -88,48 +86,62 @@ class Solve():
                 embedding_d1 = self.args.d1
                 if node_emb is None:
                     node_emb = x.view(adj.size(0), -1)
-                normalized_node_degree = x
                 num_classes = 1
-                Q_matrix = self.qubo_model.create_Q_matrix(edge_index.cpu(), adj.size(0), normalized_node_degree).to(self.device)
+                Q_matrix = self.qubo_model.create_Q_matrix(edge_index.cpu(), adj.size(0), x).to(self.device)
                 rerun = True
                 count = 0
                 while rerun:
-                    tik = time.time()
                     solver_model, optimizer = self.initialize_solver_model(embedding_d0, embedding_d1, num_classes)
+                    output = solver_model(node_emb, adj)
+                    loss = self.qubo_model.qubo_approx_cost(output, Q_matrix)
+                    while loss.item() >= 0:  # Reinitialize if loss is non-ideal
+                        solver_model, optimizer = self.initialize_solver_model(embedding_d0, embedding_d1, num_classes)
+                        output = solver_model(node_emb, adj)
+                        loss = self.qubo_model.qubo_approx_cost(output, Q_matrix)
+                    tik = time.time()
                     for _ in range(self.num_epochs):
                         solver_model.train()
                         output = solver_model(node_emb, adj)
                         loss = self.qubo_model.qubo_approx_cost(output, Q_matrix)
+                        
                         optimizer.zero_grad()
                         loss.backward(retain_graph=True)
                         optimizer.step()
                     if loss.item() < -self.args.penalty_threshold:
                         rerun = False
                     count += 1
-                    if count == 5:
-                        print(f"Graph No. {idx} Unable to pass Loss: {loss.item()}")
+                    if count >= 100:
+                        print(f"Graph No. {idx} Hard to lower than threshold: {loss.item()}")
                         break
-                if idx % 10 == 0:
-                    print(f"Graph No. {idx} Loss: {loss.item()}")
-                solver_model.eval()
-                sol1 = mis_decode_np(adj, normalized_node_degree, self.args.c1, self.args.c2, solver_model(node_emb, adj).squeeze(1))
-                qubo_time.update(time.time()-tik, self.args.batch_size)
-                qubo_size.update(sol1.sum(), self.args.batch_size)
-                qubo_accuracy.update(sol1.sum(), y.sum(), self.args.batch_size)
-            
+                if loss.item() < -self.args.penalty_threshold:
+                    if idx % 10 == 0:
+                        print(f"Graph No. {idx} Loss: {loss.item()}")
+                    solver_model.eval()
+                    sol1 = mis_decode_np(adj, x, self.args.c1, self.args.c2, solver_model(node_emb, adj).squeeze(1))
+                    time_spent = time.time()-tik
+                    qubo_time.update(time_spent)
+                    qubo_size.update(sol1.sum(), self.args.batch_size)
+                    qubo_accuracy.update(sol1.sum(), y.sum(), self.args.batch_size)
+                    print("QUBO:", sol1.sum())
             if self.DGA:
                 tik = time.time()
-                sol2 = mis_decode_np(adj, normalized_node_degree, 0, 1)
-                DGA_time.update(time.time()-tik, self.args.batch_size)
+                sol2 = mis_decode_np(adj, x, 0, 1)
+                DGA_time.update(time.time()-tik)
                 DGA_size.update(sol2.sum(), self.args.batch_size)
                 DGA_accuracy.update(sol2.sum(), y.sum(), self.args.batch_size)
+                print("DGA:", sol2.sum())
+            # Update Ground Truth data
+            gt_size.update(y.sum(), self.args.batch_size)
         
         if self.qubo or self.supervised:
-            logging.info(f"QUBO size: {qubo_size.avg}, {qubo_size.size}, QUBO Solved Accuracy: {qubo_accuracy.accuracy()}")
+            if self.supervised:
+                logging.info(f"Supervised + GD size: {supervised_size.avg}, {supervised_size.size}, Time: {supervised_time.avg_time()}")
+            if self.qubo:
+                logging.info(f"QUBO size: {qubo_size.avg}, {qubo_size.size}, QUBO Solved Accuracy: {qubo_accuracy.accuracy()}, Time: {qubo_time.avg_time()}")
+            
         if self.DGA:
-            logging.info(f"DGA size: {DGA_size.avg}, {DGA_size.size}, DGA Solved Accuracy: {DGA_accuracy.accuracy()}")
+            logging.info(f"DGA size: {DGA_size.avg}, {DGA_size.size}, DGA Solved Accuracy: {DGA_accuracy.accuracy()}, Time: {DGA_time.avg_time()}")
         
-        gt_size.update(y.sum(), self.args.batch_size)
         logging.info(f"Ground Truth size: {gt_size.avg}, {gt_size.size}")
 
 def get_classification(output):

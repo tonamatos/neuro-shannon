@@ -15,7 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout_frac', type=float, default=5e-2)
     parser.add_argument('--hidden_size', type=int, default=32)
     parser.add_argument('--supervised', action="store_true", default=False)
-    parser.add_argument('--qubo', action="store_true", default=True)
+    parser.add_argument('--qubo', action="store_true", default=False)
     parser.add_argument('--DGA', action="store_true", default=False)
     parser.add_argument('--pretrained', type=Path, action="store")
     parser.add_argument('--num_hidden_layers', type=int, default=2)
@@ -24,8 +24,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--p1', type=float, default=2)
     parser.add_argument('--p2', type=float, default=2)
-    parser.add_argument('--c1', type=float, default=1)
-    parser.add_argument('--c2', type=float, default=6)
+    parser.add_argument('--c1', type=float, default=2)
+    parser.add_argument('--c2', type=float, default=3)
+    parser.add_argument('--k', type=float, default=2)
+    parser.add_argument('--n', type=float, default=1)
 
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -40,8 +42,9 @@ if __name__ == '__main__':
         if args.supervised:
             if args.pretrained is None:
                 raise ValueError("Pretrained model is required. Please train the model before process!")
-            if args.penalty_threshold is None:
-                raise ValueError("Please provide a penalty threshold to avoid poor solution. Please give a resonable threshold.")
+            if args.qubo:
+                if args.penalty_threshold is None:
+                    raise ValueError("Please provide a penalty threshold to avoid poor solution. Please give a resonable threshold.")
             Solve(args, data=args.input).run()
         else:
             Solve(args=args).run()
