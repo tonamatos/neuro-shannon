@@ -122,14 +122,14 @@ class Solve():
                     qubo_time.update(time_spent)
                     qubo_size.update(sol1.sum(), self.args.batch_size)
                     qubo_accuracy.update(sol1.sum(), y.sum(), self.args.batch_size)
-                    print("QUBO:", sol1.sum())
+
             if self.DGA:
                 tik = time.time()
                 sol2 = mis_decode_np(adj, x, 0, 1)
                 DGA_time.update(time.time()-tik)
                 DGA_size.update(sol2.sum(), self.args.batch_size)
                 DGA_accuracy.update(sol2.sum(), y.sum(), self.args.batch_size)
-                print("DGA:", sol2.sum())
+
             # Update Ground Truth data
             gt_size.update(y.sum(), self.args.batch_size)
         
