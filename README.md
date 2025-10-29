@@ -1,6 +1,6 @@
 # Assessing and enhancing Graph Neural Networks for Combinatorial Optimization: Novel approaches and application in Maximum Independent Set problems
 
-Click here for the preprint paper: [![arXiv](https://img.shields.io/badge/arXiv-2411.05834-b31b1b.svg)](https://arxiv.org/abs/2411.05834)
+Click here for the student report: [![arXiv](https://img.shields.io/badge/arXiv-2411.05834-b31b1b.svg)](https://arxiv.org/abs/2411.05834)
 
 Combinatorial optimization (CO) problems are challenging as the computation time grows exponentially with the input. Graph Neural Networks (GNNs) show promise for researchers in solving CO
 problems. This study investigates the effectiveness of GNNs in solving the maximum independent set (MIS) problem, inspired by the intriguing findings of Schuetz et al.[1], and aimed to enhance this solver. Despite the promise shown by GNNs, some researchers observed discrepancies when reproducing the findings, particularly compared to the greedy algorithm, for instance. We reproduced Schuetz’ Quadratic Unconstrained Binary Optimization (QUBO) unsupervised approach and explored the possibility of combining it with a supervised learning approach for solving MIS problems. While the QUBO unsupervised approach did not guarantee maximal or optimal solutions, it provided a solid first guess for post-processing techniques like greedy decoding or tree-based methods.
